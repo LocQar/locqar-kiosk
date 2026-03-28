@@ -293,6 +293,40 @@ class KioskViewModel : ViewModel() {
     }
 
     // ===================================================================
+    // MEMBER STORAGE FLOW
+    // ===================================================================
+
+    /**
+     * Member creates a storage order.
+     * If subscriber → free, door opens immediately.
+     * If not subscriber → generate payment URL → show QR.
+     */
+    fun memberCreateStorage(storageSize: String = "small", durationHours: Int = 24) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            val mid = _memberId.value ?: return@launch
+
+            when (val result = api?.memberCreateStorageOrder(mid, lockerSN, storageSize, durationHours)) {
+                is ApiResult.Success -> {
+                    _currentOrderNumber.value = result.data.orderCode
+                    if (result.data.isSubscriber == true || result.data.url == null) {
+                        // Free storage — go straight to door
+                        _currentScreen.value = KioskScreen.DOOR_OPEN
+                    } else {
+                        // Payment required
+                        _paymentUrl.value = result.data.url
+                        _currentScreen.value = KioskScreen.PAYMENT_QR
+                    }
+                }
+                is ApiResult.ApiFailure -> _errorMessage.value = result.error.message
+                else -> _errorMessage.value = "Network error"
+            }
+            _isLoading.value = false
+        }
+    }
+
+    // ===================================================================
     // GUEST FLOW
     // ===================================================================
 
@@ -328,6 +362,30 @@ class KioskViewModel : ViewModel() {
             }
             is ApiResult.ApiFailure -> _errorMessage.value = result.error.message
             else -> _errorMessage.value = "Failed to generate payment"
+        }
+    }
+
+    // ===================================================================
+    // PAYMENT POLLING
+    // ===================================================================
+
+    /**
+     * Called periodically from PaymentQrScreen to check if payment is done.
+     * When payment completes, navigates to DOOR_OPEN.
+     */
+    fun checkPaymentStatus() {
+        viewModelScope.launch {
+            val order = _currentOrderNumber.value ?: return@launch
+
+            when (val result = api?.orderPayment(order, lockerSN)) {
+                is ApiResult.Success -> {
+                    if (result.data.hasPayment) {
+                        Log.i(TAG, "Payment confirmed for $order")
+                        _currentScreen.value = KioskScreen.DOOR_OPEN
+                    }
+                }
+                else -> { /* keep polling */ }
+            }
         }
     }
 
@@ -378,6 +436,7 @@ class KioskViewModel : ViewModel() {
 
 enum class KioskScreen {
     HOME,
+    SETTINGS,
     AGENT_LOGIN,
     AGENT_ORDER_LIST,
     MEMBER_LOGIN,

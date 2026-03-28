@@ -319,5 +319,26 @@ class DashboardApiClient(
         ApiResult.NetworkError(e.message ?: "Network error")
     }
 
+    /**
+     * member-create-storage-order: Member requests a locker compartment for storage.
+     */
+    suspend fun memberCreateStorageOrder(
+        memberId: String,
+        lockerSN: String,
+        storageSize: String = "small",
+        storageDurationHours: Int = 24,
+    ): ApiResult<StorageOrderResponse> = try {
+        val response = client.post("$baseUrl$EVENTS_PATH") {
+            setBody(WinnsenRequest(
+                action = "member-create-storage-order",
+                memberId = memberId, lockerSN = lockerSN,
+                storageSize = storageSize, storageDurationHours = storageDurationHours
+            ))
+        }
+        parseResponse(response)
+    } catch (e: Exception) {
+        ApiResult.NetworkError(e.message ?: "Network error")
+    }
+
     fun close() { client.close() }
 }

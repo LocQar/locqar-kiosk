@@ -1,5 +1,7 @@
 package com.locqar.kiosk.ui.screens.home
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -14,9 +16,14 @@ import com.locqar.kiosk.viewmodel.KioskScreen
 /**
  * Home screen — the kiosk idle state.
  * Three entry paths: Agent (courier), Member (student/customer), Guest (recipient).
+ * Long-press on the logo to access device settings.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun HomeScreen(onNavigate: (KioskScreen) -> Unit) {
+fun HomeScreen(
+    onNavigate: (KioskScreen) -> Unit,
+    onOpenSettings: () -> Unit = {},
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -29,6 +36,10 @@ fun HomeScreen(onNavigate: (KioskScreen) -> Unit) {
             fontSize = 48.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.combinedClickable(
+                onClick = { },
+                onLongClick = onOpenSettings,
+            ),
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
